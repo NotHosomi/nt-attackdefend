@@ -6,6 +6,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
+Handle g_cvIsolation;
 bool g_bActive;
 bool g_bCapped;
 int g_iJinraiSurvivorCount;
@@ -17,13 +18,14 @@ public Plugin myinfo =
     name = "Neotokyo Attack/Defense Gamemode Plugin",
     author = "Hosomi",
     description = "Reward the defending team for timeouts",
-    version = "1.0",
+    version = "1.1",
     url = ""
 };
 
 public void OnMapStart()
 {
     g_bActive = isAttackMap();
+    if(g_bActive) LogMessage("Attack/Defend mode activated");
 }
 
 public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -127,26 +129,7 @@ public void OnClientDisconnect(int client)
     if(g_abAlivePlayers[client-1])
         PlayerDeath(client);
 }
-//public void OnPlayerTeam(Event event, const char[] name, bool dontBroadcast)
-//{
-//    if(!event.GetBool("disconnect"))
-//        return;
-//    int client = GetClientOfUserId(event.GetInt("userid"));
-//    if(client == 0)
-//    {
-//        LogError("Invalid client disconnect");
-//        return; // invalid client
-//    }
-//    // ignore if player was already dead or speccing
-//    if(g_abAlivePlayers[client-1] && IsValidClient(client))
-//    {
-//        switch(event.GetInt("oldteam"))
-//        {
-//            case TEAM_JINRAI: --g_iJinraiSurvivorCount;
-//            case TEAM_NSF: --g_iNsfSurvivorCount;
-//        }
-//    }
-//}
+
 // Called from OnPlayerDeath and OnClientDisconnect
 public void PlayerDeath(int client)
 {
@@ -168,22 +151,6 @@ public void OnGhostCapture(int client)
     g_bCapped = true;
 }
 
-
-// CMDs
-public Action CmdTest(int client, int args)
-{
-    if(g_bActive)
-        ReplyToCommand(client, "Attack/Defend is running and active");
-    else
-        ReplyToCommand(client, "Attack/Defend is running but not active");
-    return Plugin_Continue; 
-}
-public Action CmdQuery(int client, int args)
-{
-    ReplyToCommand(client, "Capped: %b\nJinrai survivors: %i\nNSF survivors: %i", g_bCapped, g_iJinraiSurvivorCount, g_iNsfSurvivorCount);
-    return Plugin_Continue; 
-}
-
 // Non-callbacks
 bool isAttackMap()
 {
@@ -194,6 +161,8 @@ bool isAttackMap()
     int splits = ExplodeString(currentMap, "_", buffers, sizeof(buffers), sizeof(buffers[]));
     if(splits < 3)
         return false;
+    if(StrEqual(buffers[1],"isolation") && g_cvIsolation)
+        return true;
     if (StrEqual(buffers[2], "atk"))
 		return true;
 	else
@@ -203,12 +172,10 @@ bool isAttackMap()
 
 public void OnPluginStart()
 {
-    RegConsoleCmd("sm_is_atk_running", CmdTest);
-    RegConsoleCmd("sm_atk_query", CmdQuery);
+    g_cvIsolation = CreateConVar("sm_atk_on_isolation", "1", "enables the attack/defense gamemode on nt_isolation_ctg");
 
     HookEvent("game_round_end",	    OnRoundEnd);
     HookEvent("game_round_start",	OnRoundStart);
     HookEvent("player_death",		OnPlayerDeath);
     HookEvent("player_spawn",		OnPlayerSpawn);
-    //HookEvent("player_team",	    OnPlayerTeam);
 }
