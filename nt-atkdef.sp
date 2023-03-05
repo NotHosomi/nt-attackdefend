@@ -21,7 +21,7 @@ public Plugin myinfo =
     url = ""
 };
 
-public void OnMapStart(Event event, const char[] name, bool dontBroadcast)
+public void OnMapStart()
 {
     g_bActive = isAttackMap();
 }
