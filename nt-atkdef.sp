@@ -17,7 +17,7 @@ public Plugin myinfo =
     name = "Neotokyo Attack/Defense Gamemode Plugin",
     author = "Hosomi",
     description = "Reward the defending team for timeouts",
-    version = "0.1",
+    version = "1.0",
     url = ""
 };
 
@@ -35,7 +35,7 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
     if(g_iJinraiSurvivorCount == 0 || g_iNsfSurvivorCount == 0)
         return;
 
-    PrintToChatAll("Round timeout - correcting score...");
+    PrintToChatAll("Round timeout - awarding round win to defending team");
 
     // Check which side was attacking based on round number
     int round_num = GameRules_GetProp("m_iRoundNumber");
@@ -50,7 +50,6 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
         false_winner = TEAM_NSF;
     }
     int true_winner = round_num ? TEAM_JINRAI : TEAM_NSF;
-    PrintToChatAll("Actual round winner - Team %i", true_winner);
     if(false_winner == true_winner)
         return;
     
@@ -89,6 +88,13 @@ public void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
     g_iNsfSurvivorCount = 0;
     for(int i = 0; i < NEO_MAXPLAYERS; ++i)
         g_abAlivePlayers[i] = false;
+
+    // Communicate to PUB noobs how the game works
+    PrintToChatAll("[Attack/Defend] - Defending team wins if time runs out!");
+    if(GameRules_GetProp("m_iRoundNumber")%2)
+        PrintToChatAll("[Attack/Defend] - Jinrai is defending");
+    else
+        PrintToChatAll("[Attack/Defend] - NSF is defending");
 }
 public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
@@ -101,7 +107,6 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
         return;
     }
     g_abAlivePlayers[client-1] = true;
-    PrintToChatAll("Player spawn to team %i", GetClientTeam(client));
     if(GetClientTeam(client) == TEAM_JINRAI)
         ++g_iJinraiSurvivorCount;
     else if(GetClientTeam(client) == TEAM_NSF)
@@ -150,7 +155,6 @@ public void PlayerDeath(int client)
     if (gamestate == 2 || gamestate == 1) // warmup or during round
     {
         int team = GetClientTeam(client);
-        PrintToChatAll("Player death on team %i", team);
         g_abAlivePlayers[client-1] = false;
         if(team == TEAM_JINRAI)
             --g_iJinraiSurvivorCount;
