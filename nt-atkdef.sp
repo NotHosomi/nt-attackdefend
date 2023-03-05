@@ -95,13 +95,13 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
     int client = GetClientOfUserId(event.GetInt("userid"));
     if(client == 0)
         return; // invalid client
-    --client;
-    if(GetClientTeam(client) != TEAM_JINRAI || GetClientTeam(client) != TEAM_NSF)
+    if(GetClientTeam(client) != TEAM_JINRAI && GetClientTeam(client) != TEAM_NSF)
     {   // in case spectators count as "spawning"
         LogError("non-player client %i spawned", client);
         return;
     }
-    g_abAlivePlayers[client] = true;    
+    g_abAlivePlayers[client-1] = true;
+    PrintToChatAll("Player spawn to team %i", GetClientTeam(client));
     if(GetClientTeam(client) == TEAM_JINRAI)
         ++g_iJinraiSurvivorCount;
     else if(GetClientTeam(client) == TEAM_NSF)
@@ -115,12 +115,11 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
         LogError("Invalid client death");
         return; // invalid client
     }
-    --client;
     PlayerDeath(client);
 }
 public void OnClientDisconnect(int client)
 {
-    if(g_abAlivePlayers[client])
+    if(g_abAlivePlayers[client-1])
         PlayerDeath(client);
 }
 //public void OnPlayerTeam(Event event, const char[] name, bool dontBroadcast)
@@ -133,9 +132,8 @@ public void OnClientDisconnect(int client)
 //        LogError("Invalid client disconnect");
 //        return; // invalid client
 //    }
-//    --client;
 //    // ignore if player was already dead or speccing
-//    if(g_abAlivePlayers[client] && IsValidClient(client))
+//    if(g_abAlivePlayers[client-1] && IsValidClient(client))
 //    {
 //        switch(event.GetInt("oldteam"))
 //        {
@@ -151,10 +149,12 @@ public void PlayerDeath(int client)
     int gamestate = GameRules_GetProp("m_iGameState");
     if (gamestate == 2 || gamestate == 1) // warmup or during round
     {
-        g_abAlivePlayers[client] = false;   
-        if(GetClientTeam(client) == TEAM_JINRAI)
+        int team = GetClientTeam(client);
+        PrintToChatAll("Player death on team %i", team);
+        g_abAlivePlayers[client-1] = false;
+        if(team == TEAM_JINRAI)
             --g_iJinraiSurvivorCount;
-        else if(GetClientTeam(client) == TEAM_NSF)
+        else if(team == TEAM_NSF)
             --g_iNsfSurvivorCount;
     }
 }
