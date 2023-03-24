@@ -18,14 +18,15 @@ public Plugin myinfo =
     name = "Neotokyo Attack/Defense Gamemode Plugin",
     author = "Hosomi",
     description = "Reward the defending team for timeouts",
-    version = "1.1",
+    version = "1.2",
     url = ""
 };
 
 public void OnMapStart()
 {
     g_bActive = isAttackMap();
-    if(g_bActive) LogMessage("Attack/Defend mode activated");
+    if(g_bActive)
+        LogMessage("Attack/Defend mode activated");
 }
 
 public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -37,7 +38,7 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
     if(g_iJinraiSurvivorCount == 0 || g_iNsfSurvivorCount == 0)
         return;
 
-    PrintToChatAll("Round timeout - awarding round win to defending team");
+    PrintToChatAll("Round timeout - awarding round win and xp to defending team");
 
     // Check which side was attacking based on round number
     int round_num = GameRules_GetProp("m_iRoundNumber");
@@ -85,6 +86,9 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 // tracking the number of players alive at round end
 public void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
 {
+    if(!g_bActive)
+        return;
+    
     g_bCapped = false;
     g_iJinraiSurvivorCount = 0;
     g_iNsfSurvivorCount = 0;
@@ -161,12 +165,11 @@ bool isAttackMap()
     int splits = ExplodeString(currentMap, "_", buffers, sizeof(buffers), sizeof(buffers[]));
     if(splits < 3)
         return false;
-    if(StrEqual(buffers[1],"isolation") && g_cvIsolation)
-        return true;
     if (StrEqual(buffers[2], "atk"))
-		return true;
-	else
-		return false;
+        return true;
+    if(g_cvIsolation && StrEqual(buffers[1],"isolation"))
+        return true;
+    return false;
 }
 
 
@@ -174,8 +177,8 @@ public void OnPluginStart()
 {
     g_cvIsolation = CreateConVar("sm_atk_on_isolation", "1", "enables the attack/defense gamemode on nt_isolation_ctg");
 
-    HookEvent("game_round_end",	    OnRoundEnd);
-    HookEvent("game_round_start",	OnRoundStart);
-    HookEvent("player_death",		OnPlayerDeath);
-    HookEvent("player_spawn",		OnPlayerSpawn);
+    HookEvent("game_round_end",     OnRoundEnd);
+    HookEvent("game_round_start",   OnRoundStart);
+    HookEvent("player_death",       OnPlayerDeath);
+    HookEvent("player_spawn",       OnPlayerSpawn);
 }
