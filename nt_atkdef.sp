@@ -182,8 +182,9 @@ bool isAttackMap()
 public void OnPluginStart()
 {
     g_cvIsolation = CreateConVar("sm_atk_on_isolation", "1", "enables the attack/defense gamemode on nt_isolation_ctg");
-    g_cvInverted =  CreateConVar("sm_atk_inverted", "0", "If the side tracker has desynced with the team spawns, toggle this cvar");
-    RegConsoleCmd("sm_atk_isInverted", CmdIsInverted, "Says whether the spawn tracking is currently inverted");
+    g_cvInverted =  CreateConVar("sm_atk_switch", "0", "If the side tracker has desynced with the team spawns, toggle this cvar");
+    RegAdminCmd("sm_atk_switchSides", CmdSwitch, "switch the expected sides, used to fix tracking");
+    RegConsoleCmd("sm_atk_isSwitched", CmdIsInverted, "Says whether the spawn tracking is currently switched");
     RegConsoleCmd("sm_atk_isActive",   CmdIsActive, "Says whether the atk/def plugin is currently active");
     RegConsoleCmd("sm_atk_whoDef",     CmdWhoDef, "Says whether the atk/def plugin is currently active");
 
@@ -193,16 +194,39 @@ public void OnPluginStart()
     HookEvent("player_spawn",       OnPlayerSpawn);
 }
 
+public Action CmdSwitch(int client, int args)
+{
+    g_cvInverted = !g_cvInverted;
+    
+
+    int round_num = GameRules_GetProp("m_iRoundNumber");
+    if(g_cvInverted)
+    {
+        round_num += 1;
+    }
+    round_num %= 2;
+    if(round_num)
+    {
+        ReplyToCommand(client, "[ATK/DEF] Switched sides. Jinrai is currently defending");
+    }
+    else
+    {
+        ReplyToCommand(client, "[ATK/DEF] Switched sides. NSF is currently defending");
+    }
+
+    return Plugin_Handled;
+}
+
 // All these if elses are nasty but idc
 public Action CmdIsInverted(int client, int args)
 {
     if(g_cvInverted)
     {
-        ReplyToCommand(client, "[ATK/DEF] currently inverted");
+        ReplyToCommand(client, "[ATK/DEF] currently switched");
     }
     else
     {
-        ReplyToCommand(client, "[ATK/DEF] not inverted");
+        ReplyToCommand(client, "[ATK/DEF] not switched");
     }
     return Plugin_Handled;
 }
