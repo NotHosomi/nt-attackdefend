@@ -7,6 +7,7 @@
 #pragma newdecls required
 
 Handle g_cvIsolation;
+Handle g_cvInverted;
 bool g_bActive;
 bool g_bCapped;
 int g_iJinraiSurvivorCount;
@@ -42,6 +43,11 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 
     // Check which side was attacking based on round number
     int round_num = GameRules_GetProp("m_iRoundNumber");
+    // If an admin has told us the round number was out of sync with the expected spawns, offset it
+    if(g_cvInverted)
+    {
+        round_num += 1;
+    }
     round_num %= 2;
     int false_winner = TEAM_NONE;
     if(g_iJinraiSurvivorCount > g_iNsfSurvivorCount)
@@ -176,9 +182,59 @@ bool isAttackMap()
 public void OnPluginStart()
 {
     g_cvIsolation = CreateConVar("sm_atk_on_isolation", "1", "enables the attack/defense gamemode on nt_isolation_ctg");
+    g_cvInverted =  CreateConVar("sm_atk_inverted", "0", "If the side tracker has desynced with the team spawns, toggle this cvar");
+    RegConsoleCmd("sm_atk_isInverted", CmdIsInverted, "Says whether the spawn tracking is currently inverted");
+    RegConsoleCmd("sm_atk_isActive",   CmdIsActive, "Says whether the atk/def plugin is currently active");
+    RegConsoleCmd("sm_atk_whoDef",     CmdWhoDef, "Says whether the atk/def plugin is currently active");
 
     HookEvent("game_round_end",     OnRoundEnd);
     HookEvent("game_round_start",   OnRoundStart);
     HookEvent("player_death",       OnPlayerDeath);
     HookEvent("player_spawn",       OnPlayerSpawn);
+}
+
+// All these if elses are nasty but idc
+public Action CmdIsInverted(int client, int args)
+{
+    if(g_cvInverted)
+    {
+        ReplyToCommand(client, "[ATK/DEF] currently inverted");
+    }
+    else
+    {
+        ReplyToCommand(client, "[ATK/DEF] not inverted");
+    }
+    return Plugin_Handled;
+}
+
+public Action CmdIsActive(int client, int args)
+{
+    if(g_bActive)
+    {
+        ReplyToCommand(client, "[ATK/DEF] currently active");
+    }
+    else
+    {
+        ReplyToCommand(client, "[ATK/DEF] not active");
+    }
+    return Plugin_Handled;
+}
+
+public Action CmdWhoDef(int client, int args)
+{
+    int round_num = GameRules_GetProp("m_iRoundNumber");
+    if(g_cvInverted)
+    {
+        round_num += 1;
+    }
+    round_num %= 2;
+    if(round_num)
+    {
+        ReplyToCommand(client, "[ATK/DEF] Jinrai is defending");
+    }
+    else
+    {
+        ReplyToCommand(client, "[ATK/DEF] NSF is defending");
+    }
+    return Plugin_Handled;
 }
