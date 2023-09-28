@@ -19,7 +19,7 @@ public Plugin myinfo =
     name = "Neotokyo Attack/Defense Gamemode Plugin",
     author = "Hosomi",
     description = "Reward the defending team for timeouts",
-    version = "1.2",
+    version = "1.3",
     url = ""
 };
 
@@ -34,7 +34,7 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
     if(!g_bActive)
         return;
-    if(g_bCapped) // Todo assign g_bCapped
+    if(g_bCapped)
         return;
     if(g_iJinraiSurvivorCount == 0 || g_iNsfSurvivorCount == 0)
         return;
@@ -105,13 +105,14 @@ public void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
     PrintToChatAll("[Attack/Defend] - Defending team wins if time runs out!");
     if(GameRules_GetProp("m_iAttackingTeam") == TEAM_NSF)
         PrintToChatAll("[Attack/Defend] - Jinrai is defending");
-    else if(GameRules_GetProp("m_iAttackingTeam") == TEAM_JINRAI)
-        PrintToChatAll("[Attack/Defend] - NSF is defending");
     else
-        PrintToChatAll("[Attack/Defend] - Unknown Team is defending... wtf");
+        PrintToChatAll("[Attack/Defend] - NSF is defending");
 }
 public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
+    if(!g_bActive)
+        return;
+
     int client = GetClientOfUserId(event.GetInt("userid"));
     if(client == 0)
         return; // invalid client
@@ -127,6 +128,9 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 }
 public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
+    if(!g_bActive)
+        return;
+
     int client = GetClientOfUserId(event.GetInt("userid"));
     if(client == 0)
     {
@@ -137,6 +141,9 @@ public void OnPlayerDeath(Event event, const char[] name, bool dontBroadcast)
 }
 public void OnClientDisconnect(int client)
 {
+    if(!g_bActive)
+        return;
+
     if(g_abAlivePlayers[client-1])
         PlayerDeath(client);
 }
@@ -259,15 +266,15 @@ public Action CmdWhoDef(int client, int args)
 //    }
     if(eAttackers == TEAM_JINRAI)
     {
-        ReplyToCommand(client, "[ATK/DEF] Jinrai is defending");
+        ReplyToCommand(client, "[ATK/DEF] NSF is defending");
     }
     else if (eAttackers == TEAM_NSF)
     {
-        ReplyToCommand(client, "[ATK/DEF] NSF is defending");
+        ReplyToCommand(client, "[ATK/DEF] Jinrai is defending");
     }
     else
     {
-        ReplyToCommand(client, "[ATK/DEF] Unknown team is defending");
+        ReplyToCommand(client, "[ATK/DEF] Unknown team is defending... wtf");
     }
     return Plugin_Handled;
 }
