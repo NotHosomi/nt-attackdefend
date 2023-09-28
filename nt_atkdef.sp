@@ -7,7 +7,7 @@
 #pragma newdecls required
 
 Handle g_cvIsolation;
-Handle g_cvInverted;
+//Handle g_cvInverted;
 bool g_bActive;
 bool g_bCapped;
 int g_iJinraiSurvivorCount;
@@ -42,35 +42,35 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
     PrintToChatAll("Round timeout - awarding round win and xp to defending team");
 
     // Check which side was attacking based on round number
-    int round_num = GameRules_GetProp("m_iRoundNumber");
-    // If an admin has told us the round number was out of sync with the expected spawns, offset it
-    if(g_cvInverted)
-    {
-        round_num += 1;
-    }
-    round_num %= 2;
-    int false_winner = TEAM_NONE;
+    int eAttackers = GameRules_GetProp("m_iAttackingTeam");
+    // If an admin has told us that things are the wrong way around, swap them
+//    if(g_cvInverted)
+//    {
+//        eAttackers = eAttackers == TEAM_NSF ? TEAM_JINRAI : TEAM_NSF;
+//    }
+
+    int eFalseWinner = TEAM_NONE;
     if(g_iJinraiSurvivorCount > g_iNsfSurvivorCount)
     {
-        false_winner = TEAM_JINRAI;
+        eFalseWinner = TEAM_JINRAI;
     }
     if(g_iJinraiSurvivorCount < g_iNsfSurvivorCount)
     {
-        false_winner = TEAM_NSF;
+        eFalseWinner = TEAM_NSF;
     }
-    int true_winner = round_num ? TEAM_JINRAI : TEAM_NSF;
-    if(false_winner == true_winner)
+    int eTrueWinner = eAttackers == TEAM_NSF ? TEAM_JINRAI : TEAM_NSF;
+    if(eFalseWinner == eTrueWinner)
         return;
     
     // correct team scores
     int score;
-    if(false_winner != TEAM_NONE)
+    if(eFalseWinner != TEAM_NONE)
     {
-        score = GetTeamScore(false_winner);
-        SetTeamScore(false_winner, score-1);
+        score = GetTeamScore(eFalseWinner);
+        SetTeamScore(eFalseWinner, score-1);
     }
-    score = GetTeamScore(true_winner);
-    SetTeamScore(true_winner, score+1);
+    score = GetTeamScore(eTrueWinner);
+    SetTeamScore(eTrueWinner, score+1);
 
     // correct player XP
     int xp;
@@ -82,9 +82,9 @@ public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
         // Correct XP
         team = GetClientTeam(client);
         xp = GetPlayerXP(client);
-        if(team == false_winner)
+        if(team == eFalseWinner)
             SetPlayerXP(client, xp-1);
-        else if (team == true_winner)
+        else if (team == eTrueWinner)
             SetPlayerXP(client, xp+1);
     }
 }
@@ -103,10 +103,12 @@ public void OnRoundStart(Event event, const char[] name, bool dontBroadcast)
 
     // Communicate to PUB noobs how the game works
     PrintToChatAll("[Attack/Defend] - Defending team wins if time runs out!");
-    if(GameRules_GetProp("m_iRoundNumber")%2)
+    if(GameRules_GetProp("m_iAttackingTeam") == TEAM_NSF)
         PrintToChatAll("[Attack/Defend] - Jinrai is defending");
-    else
+    else if(GameRules_GetProp("m_iAttackingTeam") == TEAM_JINRAI)
         PrintToChatAll("[Attack/Defend] - NSF is defending");
+    else
+        PrintToChatAll("[Attack/Defend] - Unknown Team is defending... wtf");
 }
 public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
@@ -115,7 +117,6 @@ public void OnPlayerSpawn(Event event, const char[] name, bool dontBroadcast)
         return; // invalid client
     if(GetClientTeam(client) != TEAM_JINRAI && GetClientTeam(client) != TEAM_NSF)
     {   // in case spectators count as "spawning"
-        LogError("non-player client %i spawned", client);
         return;
     }
     g_abAlivePlayers[client-1] = true;
@@ -178,13 +179,12 @@ bool isAttackMap()
     return false;
 }
 
-
 public void OnPluginStart()
 {
     g_cvIsolation = CreateConVar("sm_atk_on_isolation", "1", "enables the attack/defense gamemode on nt_isolation_ctg");
-    g_cvInverted =  CreateConVar("sm_atk_switch", "0", "If the side tracker has desynced with the team spawns, toggle this cvar");
-    RegAdminCmd("sm_atk_switchSides", CmdSwitch, "switch the expected sides, used to fix tracking");
-    RegConsoleCmd("sm_atk_isSwitched", CmdIsInverted, "Says whether the spawn tracking is currently switched");
+//    g_cvInverted =  CreateConVar("sm_atk_switch", "0", "If the side tracker has desynced with the team spawns, toggle this cvar");
+//    RegAdminCmd("sm_atk_switchSides", CmdSwitch, ADMFLAG_GENERIC, "switch the expected sides, used to fix tracking");
+//    RegConsoleCmd("sm_atk_isSwitched", CmdIsInverted, "Says whether the spawn tracking is currently switched");
     RegConsoleCmd("sm_atk_isActive",   CmdIsActive, "Says whether the atk/def plugin is currently active");
     RegConsoleCmd("sm_atk_whoDef",     CmdWhoDef, "Says whether the atk/def plugin is currently active");
 
@@ -194,42 +194,48 @@ public void OnPluginStart()
     HookEvent("player_spawn",       OnPlayerSpawn);
 }
 
-public Action CmdSwitch(int client, int args)
-{
-    g_cvInverted = !g_cvInverted;
-    
-
-    int round_num = GameRules_GetProp("m_iRoundNumber");
-    if(g_cvInverted)
-    {
-        round_num += 1;
-    }
-    round_num %= 2;
-    if(round_num)
-    {
-        ReplyToCommand(client, "[ATK/DEF] Switched sides. Jinrai is currently defending");
-    }
-    else
-    {
-        ReplyToCommand(client, "[ATK/DEF] Switched sides. NSF is currently defending");
-    }
-
-    return Plugin_Handled;
-}
+//public Action CmdSwitch(int client, int args)
+//{
+//    if(g_cvInverted)
+//    {
+//        g_cvInverted = 0;
+//    }
+//    else
+//    {
+//        g_cvInverted = 1;
+//    }    
+//
+//    
+//    int eAttackers = GameRules_GetProp("m_iAttackingTeam");
+//    if(g_cvInverted)
+//    {
+//        eAttackers = eAttackers == TEAM_NSF ? TEAM_JINRAI : TEAM_NSF;
+//    }
+//    if(eAttackers == TEAM_JINRAI)
+//    {
+//        ReplyToCommand(client, "[ATK/DEF] Switched sides. Jinrai is currently defending");
+//    }
+//    else if(eAttackers == TEAM_NSF)
+//    {
+//        ReplyToCommand(client, "[ATK/DEF] Switched sides. NSF is currently defending");
+//    }
+//
+//    return Plugin_Handled;
+//}
 
 // All these if elses are nasty but idc
-public Action CmdIsInverted(int client, int args)
-{
-    if(g_cvInverted)
-    {
-        ReplyToCommand(client, "[ATK/DEF] currently switched");
-    }
-    else
-    {
-        ReplyToCommand(client, "[ATK/DEF] not switched");
-    }
-    return Plugin_Handled;
-}
+//public Action CmdIsInverted(int client, int args)
+//{
+//    if(g_cvInverted)
+//    {
+//        ReplyToCommand(client, "[ATK/DEF] currently switched");
+//    }
+//    else
+//    {
+//        ReplyToCommand(client, "[ATK/DEF] not switched");
+//    }
+//    return Plugin_Handled;
+//}
 
 public Action CmdIsActive(int client, int args)
 {
@@ -246,19 +252,22 @@ public Action CmdIsActive(int client, int args)
 
 public Action CmdWhoDef(int client, int args)
 {
-    int round_num = GameRules_GetProp("m_iRoundNumber");
-    if(g_cvInverted)
-    {
-        round_num += 1;
-    }
-    round_num %= 2;
-    if(round_num)
+    int eAttackers = GameRules_GetProp("m_iAttackingTeam");
+//    if(g_cvInverted)
+//    {
+//        eAttackers = eAttackers == TEAM_NSF ? TEAM_JINRAI : TEAM_NSF;
+//    }
+    if(eAttackers == TEAM_JINRAI)
     {
         ReplyToCommand(client, "[ATK/DEF] Jinrai is defending");
     }
-    else
+    else if (eAttackers == TEAM_NSF)
     {
         ReplyToCommand(client, "[ATK/DEF] NSF is defending");
+    }
+    else
+    {
+        ReplyToCommand(client, "[ATK/DEF] Unknown team is defending");
     }
     return Plugin_Handled;
 }
