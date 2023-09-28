@@ -8,11 +8,14 @@
 
 Handle g_cvIsolation;
 //Handle g_cvInverted;
-bool g_bActive;
-bool g_bCapped;
-int g_iJinraiSurvivorCount;
-int g_iNsfSurvivorCount;
+bool g_bActive = false;
+bool g_bCapped = false;
+int g_iJinraiSurvivorCount = 0;
+int g_iNsfSurvivorCount = 0;
 int g_abAlivePlayers[NEO_MAXPLAYERS];
+
+// noZanshi modulation
+bool g_bDefaultNoZanshi;
 
 public Plugin myinfo =
 {
@@ -25,9 +28,29 @@ public Plugin myinfo =
 
 public void OnMapStart()
 {
+    Handle cvNoZanshi = FindConVar("sm_competitive_nozanshi");
+    if(cvNoZanshi != null)
+    {
+        g_bDefaultNoZanshi = GetConVarBool(cvNoZanshi);
+    }
+
+    // check whether we're on a compatible map
     g_bActive = isAttackMap();
     if(g_bActive)
         LogMessage("Attack/Defend mode activated");
+
+    // If the nozanshi was disabled on an atk/def map previously, we potentially need to reenable it
+    if(cvNoZanshi != null)
+    {
+        if(g_bActive)
+        {
+            SetConVarBool(cvNoZanshi, false);
+        }
+        else
+        {
+            SetConVarBool(cvNoZanshi, g_bDefaultNoZanshi);
+        }
+    }
 }
 
 public void OnRoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -181,7 +204,7 @@ bool isAttackMap()
         return false;
     if (StrEqual(buffers[2], "atk"))
         return true;
-    if(g_cvIsolation && StrEqual(buffers[1],"isolation"))
+    if(GetConVarBool(g_cvIsolation) && StrEqual(buffers[1],"isolation"))
         return true;
     return false;
 }
